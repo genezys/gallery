@@ -1,0 +1,70 @@
+html
+{
+	margin: 0;
+	padding: 0;
+	background: #333;
+	color: #eee;
+	font-family: Helvetica, Arial, sans-serif;
+}
+body
+{
+	margin: 0;
+	padding: 0;
+}
+#title
+{
+	margin: 0;
+	background: #bbb;
+	color: #222;
+	border-bottom: 1px solid #222;
+	font-weight: normal;
+	font-size: 1.2em;
+	padding: 0.2em 0.5ex;
+	text-shadow: 1px 1px 1px #fff;
+}
+#title a
+{
+	color: inherit;
+	text-decoration: inherit;
+}
+.event
+{
+	list-style-type: none;
+	margin: 0.5em 0 0 1ex;
+	padding: 0;
+}
+.event li
+{
+	float: left;
+	list-style-type: none;
+	margin: 0 1ex 0.5em 0;
+	padding: 0;
+}
+.event li a
+{
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+.event a:hover
+{
+	outline: 0.5ex solid #fc0;
+}
+.event a img
+{
+	display: block;
+	border: 0;
+	width: 100%;
+}
+.image
+{
+	margin: 0.5em 1ex;
+	padding: 0;
+}
+.image div
+{
+}
+.image img
+{
+	max-width: 100%;
+}
