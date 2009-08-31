@@ -53,7 +53,10 @@ ActiveController::route('get', '/events/:event', function($params)
 	{
 		$format = function($result, $image)use($event)
 		{
-			$result[$image] = ActiveRequest::scriptUri().'/events/'.urlencode($event).'/'.urlencode($image);
+			$result[] = array(
+				'name'=> $image,
+				'href'=> ActiveRequest::scriptUri().'/events/'.urlencode($event).'/'.urlencode($image)
+			);
 			return $result;
 		};
 		echo json_encode(array_reduce($images, $format, array()));

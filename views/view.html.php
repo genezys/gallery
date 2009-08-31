@@ -8,7 +8,7 @@
 </head>
 <body>
 <script type="text/javascript" charset="utf-8"
-	src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.min.js">
+	src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.js">
 </script>
 <script type="text/javascript" charset="utf-8"
 	src="../jquery.async.js">
@@ -99,11 +99,11 @@ function buildEventPage(event)
 	{
 		httpGet(events[event], function(images)
 		{ 
-			$.each(images, function(name, url)
+			$.each(images, function(i, image)
 			{ 
 				var $img = $('<li></li>').appendTo($ul);
 
-				httpGet(url, function(img)
+				httpGet(image.href, function(img)
 				{
 					var size = Math.max(img.thumbnailwidth, img.thumbnailheight),
 						offsetTop = Math.round(Math.max(0, img.thumbnailwidth - img.thumbnailheight) / 2),
@@ -126,31 +126,45 @@ function buildEventPage(event)
 	});	
 }
 
-function buildImagePage(event, image)
+function buildImagePage(event, imageName)
 {
-	title(['<a href="#">Gallery</a>', '<a href="#/'+event+'">'+event+'</a>', image]);
+	title(['<a href="#">Gallery</a>', '<a href="#/'+event+'">'+event+'</a>', imageName]);
 	var $div = $('<div class="image"></div>').appendTo('body');
 
 	httpGet(EVENTS_URI, function(events)
 	{
 		httpGet(events[event], function(images)
 		{
-			httpGet(images[image], function(img)
-			{ 
-				var size = Math.max(img.width, img.height),
-					offsetTop = Math.round(Math.max(0, img.width - img.height) / 2),
-					offsetLeft = Math.round(Math.max(0, img.height - img.width) / 2),
-				 	
-					$img = $('<div><img src="'+ img.href +'"></div>')
-					.rotateByOrientation(img.orientation)
-					.find('img')
-						.one('load', function(){ $(window).trigger('resize') })
-					.end()
-					.appendTo($div);
-					
-				// Trigger a resize, we have an event to handled rotated images
-				$(window).trigger('resize');
-			});
+			var index = $.inArray(imageName, $.map(images, function(i){ return i.name }));
+			if( index >= 0 ) 
+			{
+				function link(klass, i, character)
+				{
+					var valid = ( i >= 0 && i < images.length );
+					character = valid ? character : "&nbsp;";
+					var href = valid ? '#/'+event+'/'+images[i].name : 'javascript:void(0)';
+					$('#title').append('<a class="'+klass+'" href="'+href+'">'+character+'</a>');
+				}
+				link('next', index+1, '\u25b7');
+				link('prev', index-1, '\u25c1');
+				
+				httpGet(images[index].href, function(img)
+				{ 
+					var size = Math.max(img.width, img.height),
+						offsetTop = Math.round(Math.max(0, img.width - img.height) / 2),
+						offsetLeft = Math.round(Math.max(0, img.height - img.width) / 2),
+
+						$img = $('<div><img src="'+ img.href +'"></div>')
+						.rotateByOrientation(img.orientation)
+						.find('img')
+							.one('load', function(){ $(window).trigger('resize') })
+						.end()
+						.appendTo($div);
+
+					// Trigger a resize, we have an event to handled rotated images
+					$(window).trigger('resize');
+				});
+			}
 		});
 	});
 }
