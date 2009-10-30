@@ -10,8 +10,6 @@
 <script type="text/javascript" charset="utf-8"
 	src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.js">
 </script>
-<script type="text/javascript" charset="utf-8"
-	src="../jquery.async.js">
 </script>
 <script type="text/javascript" charset="utf-8">
 //<![CDATA[
@@ -38,6 +36,7 @@
 		}
 		return this;
 	}
+	
 })(jQuery);
 
 var EVENTS_URI = location.pathname + "/events";
@@ -169,6 +168,28 @@ function buildImagePage(event, imageName)
 	});
 }
 
+function oneAtATime(callback)
+{
+	oneAtATime.running = oneAtATime.running || false;
+	oneAtATime.stack = oneAtATime.stack || [];
+	oneAtATime.stack.push(callback);
+	
+	if( !oneAtATime.running ) 
+	{
+		(function loop(){ 
+			if( oneAtATime.stack.length > 0 ) 
+			{
+				oneAtATime.running = true;
+				oneAtATime.stack.shift().call(this, function()
+				{
+					oneAtATime.running = false;
+					setTimeout(loop, 0); // Break recursion
+				});
+			}
+		})();
+	}
+}
+
 function httpGet(url, callback)
 {
 	arguments.callee.cache = arguments.callee.cache || {};
@@ -179,10 +200,14 @@ function httpGet(url, callback)
 	}
 	else
 	{
-		$.getJSON(url, function(json)
+		oneAtATime(function(cb)
 		{ 
-			cache[url] = json;
-			callback(cache[url]);
+			$.getJSON(url, function(json)
+			{ 
+				cache[url] = json;
+				callback(cache[url]);
+				cb();
+			});			 
 		});
 	}
 }
