@@ -3,41 +3,48 @@ require(dirname(__FILE__).'/../active-php/active-php/index.php');
 
 define('MIME_GALLERY_JSON', 'application/vnd.genezys.gallery+json');
 define('MAX_SIZE', 210);
-define('DIR_ALBUMS', 'albums');
-define('DIR_THUMBNAILS', 'thumbnails');
-define('DIR_VIEWS', 'views');
+define('PATH_ALBUMS', dirname(__FILE__).'/albums');
+define('PATH_THUMBNAILS', dirname(__FILE__).'/thumbnails');
+define('PATH_VIEWS', dirname(__FILE__).'/views');
 
 /////////////////////////////////////////////////////////////////////
-ActiveController::route('get', '/', function()
+ActiveController::route('get', '/', 'route_getRoot');
+function route_getRoot()
 {
-	ActiveController::views(__FILE__, DIR_VIEWS.'/view');
+	ActiveController::views(PATH_VIEWS.'/view');
 	ActiveController::respondWithView('html', 'text/html');
 	ActiveController::respond();
-});
+}
 
 /////////////////////////////////////////////////////////////////////
-ActiveController::route('get', '/events', function()
+ActiveController::route('get', '/events', 'route_getEvents');
+function route_getEvents()
 {
-	$events = glob(dirname(__FILE__).'/'.DIR_ALBUMS.'/*',  GLOB_ONLYDIR);
+	$events = glob(PATH_ALBUMS.'/*',  GLOB_ONLYDIR);
 	
-	ActiveController::respondWith('js', MIME_GALLERY_JSON, function()use($events)
-	{
-		$format = function($result, $event)
-		{
-			$name = basename($event);
-			$result[$name] = ActiveRequest::scriptUri().'/events/'.urlencode($name);
-			return $result;
-		};
-		echo json_encode(array_reduce($events, $format, array()));
-	});
+	
+	ActiveController::value('events', $events);
+	ActiveController::respondWith('js', MIME_GALLERY_JSON, 'route_getEvents_js');
 	ActiveController::respond();
-});
+}
+function route_getEvents_js()
+{
+	$events = ActiveController::value('events');
+	$mapEventInfo = array();
+	foreach( $events as $event ) 
+	{
+		$name = basename($event);
+		$mapEventInfo[$name] = ActiveRequest::scriptUri().'/events/'.urlencode($name);
+	}
+	echo json_encode($mapEventInfo);
+}
 
 /////////////////////////////////////////////////////////////////////
-ActiveController::route('get', '/events/:event', function($params)
+ActiveController::route('get', '/events/:event', 'route_getEvent');
+function route_getEvent($params)
 {
 	$event = ActiveUtils::arrayGet($params, 'event');
-	$pathEvent = dirname(__FILE__).'/'.DIR_ALBUMS.'/'.$event;
+	$pathEvent = PATH_ALBUMS.'/'.$event;
 	
 	if( !is_dir($pathEvent) )
 	{
@@ -46,30 +53,39 @@ ActiveController::route('get', '/events/:event', function($params)
 	}
 	
 	$directoryEntries = glob($pathEvent.'/*');
-	$imagePaths = array_filter($directoryEntries, function($entry) { return is_file($entry); });
-	$images = array_map(function($path){ return basename($path); }, $imagePaths);
+	$imagePaths = array_filter($directoryEntries, 'is_file');
+	$images = array_map('basename', $imagePaths);
 	
-	ActiveController::respondWith('js', MIME_GALLERY_JSON, function()use($event, $images)
-	{
-		$format = function($result, $image)use($event)
-		{
-			$result[$image] = ActiveRequest::scriptUri().'/events/'.urlencode($event).'/'.urlencode($image);
-			return $result;
-		};
-		echo json_encode(array_reduce($images, $format, array()));
-	});
+	ActiveController::value('event', $event);
+	ActiveController::value('images', $images);
+	ActiveController::respondWith('js', MIME_GALLERY_JSON, 'route_getEvent_js');
 	ActiveController::respond();
-});
+}
+function route_getEvent_js()
+{
+	$event = ActiveController::value('event');
+	$images = ActiveController::value('images');
+
+	$aImageInfo = array();
+	foreach( $images as $image ) 
+	{
+		$aImageInfo[] = array(
+			'name'=> $image,
+			'href'=> ActiveRequest::scriptUri().'/events/'.urlencode($event).'/'.urlencode($image)
+		);
+	}
+	echo json_encode($aImageInfo);
+}
 
 /////////////////////////////////////////////////////////////////////
-ActiveController::route('get', '/events/:event/:image', function($params)
+ActiveController::route('get', '/events/:event/:image', 'route_getImage');
+function route_getImage($params)
 {
 	$event = ActiveUtils::arrayGet($params, 'event');
 	$image = ActiveUtils::arrayGet($params, 'image');
 	$idImage = $event.'/'.$image;
-	$pathImage = dirname(__FILE__).'/'.DIR_ALBUMS.'/'.$idImage;
-	$uriImage = ActiveRequest::relativeUri(DIR_ALBUMS.'/'.$idImage);
-	
+	$pathImage = PATH_ALBUMS.'/'.$idImage;
+	$uriImage = ActiveRequest::relativeUri(ActiveUtils::relativePath(__FILE__, $pathImage));
 	
 	if( !is_file($pathImage) )
 	{
@@ -87,15 +103,15 @@ ActiveController::route('get', '/events/:event/:image', function($params)
 	$widthThumbnail = intval($width / $ratioSize);
 	$heightThumbnail = intval($height / $ratioSize);
 	
-	$pathThumbnail = dirname(__FILE__).'/'.DIR_THUMBNAILS.'/'.$idImage;
-	$uriThumbnail = ActiveRequest::relativeUri(DIR_THUMBNAILS.'/'.$idImage);
+	$pathThumbnail = PATH_THUMBNAILS.'/'.$idImage;
+	$uriThumbnail = ActiveRequest::relativeUri(ActiveUtils::relativePath(__FILE__, $pathThumbnail));
 	
 	if( !is_file($pathThumbnail) ) 
 	{
 		$img = imagecreatefromjpeg($pathImage);
 		$thumbnail = imagecreatetruecolor($widthThumbnail, $heightThumbnail);
 		imagecopyresampled($thumbnail, $img, 0, 0, 0, 0, $widthThumbnail, $heightThumbnail, $width, $height);
-		mkdir(dirname($pathThumbnail), 0777, true);
+		@mkdir(dirname($pathThumbnail), 0777, true);
 		imagejpeg($thumbnail, $pathThumbnail);
 	}
 	
@@ -110,7 +126,7 @@ ActiveController::route('get', '/events/:event/:image', function($params)
 		'orientation'=> ActiveUtils::arrayGet($exif, 'Orientation'),
 	);
 	echo json_encode($imageInfo);
-});
+}
 
 /////////////////////////////////////////////////////////////////////
 ActiveController::dispatch();
